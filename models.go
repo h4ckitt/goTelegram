@@ -1,8 +1,12 @@
 package bot
 
+import "reflect"
+
 type Bot struct {
-	Me     User
-	ApiUrl string
+	Me         User
+	ApiUrl     string
+	Handler    reflect.Value
+	HandlerSet bool
 }
 
 type User struct {

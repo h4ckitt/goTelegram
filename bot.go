@@ -7,26 +7,27 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func NewBot(s string) Bot {
-	return Bot{ApiUrl: "https://api.telegram.org/bot" + s}
+	return Bot{APIURL: "https://api.telegram.org/bot" + s}
 }
 
-func NewInlineKeyboard() Keyboard {
-	return Keyboard{Keyboard: [][]InlineKeyboard{}}
+func NewInlineKeyboard() keyboard {
+	return keyboard{Keyboard: [][]inlineKeyboard{}}
 }
 
-func (k *Keyboard) AddButton(text, callback string) {
-	k.Buttons = append(k.Buttons, InlineKeyboard{Text: text, Data: callback})
+func (k *keyboard) AddButton(text, callback string) {
+	k.Buttons = append(k.Buttons, inlineKeyboard{Text: text, Data: callback})
 }
 
-func (k *Keyboard) MakeKeyboardRow() {
+func (k *keyboard) MakeKeyboardRow() {
 	k.Keyboard = append(k.Keyboard, k.Buttons)
 	k.Buttons = nil
 }
 
-func (k *Keyboard) DeleteKeyboard() {
+func (k *keyboard) DeleteKeyboard() {
 	k.Buttons = nil
 	k.Keyboard = nil
 }
@@ -43,16 +44,19 @@ func (b *Bot) SetHandler(fn interface{}) {
 }
 
 func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
-	var update Update
-
-	err := json.NewDecoder(r.Body).Decode(&update)
-
-	if err != nil {
-		log.Println("Couldn't Parse Incoming Message")
-		return
-	}
 
 	if b.HandlerSet {
+
+		var update Update
+
+		err := json.NewDecoder(r.Body).Decode(&update)
+
+		if err != nil {
+			log.Println("Couldn't Parse Incoming Message")
+			return
+		}
+
+		update.Command = strings.Fields(update.Message.Text)[0]
 
 		rarg := make([]reflect.Value, 1)
 
@@ -67,10 +71,10 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *Bot) AnswerCallback(callbackID string) {
-	link := b.ApiUrl + "/answerCallbackQuery"
+	link := b.APIURL + "/answerCallbackQuery"
 
-	answer := AnswerCallback{
-		Id: callbackID,
+	answer := answerCallback{
+		ID: callbackID,
 	}
 
 	jsonBody, err := json.Marshal(answer)
@@ -94,11 +98,11 @@ func (b *Bot) AnswerCallback(callbackID string) {
 	}
 }
 
-func (b *Bot) SendMessage(s string, c Chat, k Keyboard) {
+func (b *Bot) SendMessage(s string, c chat, k keyboard) {
 
-	link := b.ApiUrl + "/sendMessage"
+	link := b.APIURL + "/sendMessage"
 
-	reply := ReplyBody{
+	reply := replyBody{
 		ChatID: strconv.Itoa(c.ID),
 		Text:   s,
 	}
@@ -129,10 +133,10 @@ func (b *Bot) SendMessage(s string, c Chat, k Keyboard) {
 	}
 }
 
-func (b *Bot) EditMessage(message Message, text string, k Keyboard) {
-	link := b.ApiUrl + "/editMessageText"
+func (b *Bot) EditMessage(message message, text string, k keyboard) {
+	link := b.APIURL + "/editMessageText"
 
-	updatedText := EditBody{
+	updatedText := editBody{
 		ChatID:    strconv.Itoa(message.Chat.ID),
 		MessageID: message.MessageID,
 		Text:      text,
