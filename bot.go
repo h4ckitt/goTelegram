@@ -3,38 +3,70 @@ package bot
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
-	"strings"
 )
 
-func newBot(s string) Bot {
+func NewBot(s string) Bot {
 	return Bot{ApiUrl: "https://api.telegram.org/bot" + s}
 }
 
-func newInlineKeyboard() Keyboard {
+func NewInlineKeyboard() Keyboard {
 	return Keyboard{Keyboard: [][]InlineKeyboard{}}
 }
 
-func (k *Keyboard) addButton(text, callback string) {
+func (k *Keyboard) AddButton(text, callback string) {
 	k.Buttons = append(k.Buttons, InlineKeyboard{Text: text, Data: callback})
 }
 
-func (k *Keyboard) makeKeyboardRow() {
+func (k *Keyboard) MakeKeyboardRow() {
 	k.Keyboard = append(k.Keyboard, k.Buttons)
 	k.Buttons = nil
 }
 
-func (k *Keyboard) deleteKeyboard() {
+func (k *Keyboard) DeleteKeyboard() {
 	k.Buttons = nil
 	k.Keyboard = nil
 }
 
-func (b Bot) answerCallback(callbackID string) {
+func (b *Bot) SetHandler(fn interface{}) {
+	b.HandlerSet = false
+	b.Handler = reflect.ValueOf(fn)
+	if b.Handler.Kind() != reflect.Func {
+		log.Println("Argument Is Not Of Type Function")
+		return
+	}
+
+	b.HandlerSet = true
+}
+
+func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+	var update Update
+
+	err := json.NewDecoder(r.Body).Decode(&update)
+
+	if err != nil {
+		log.Println("Couldn't Parse Incoming Message")
+		return
+	}
+
+	if b.HandlerSet {
+
+		rarg := make([]reflect.Value, 1)
+
+		rarg[0] = reflect.ValueOf(update)
+
+		go b.Handler.Call(rarg)
+	} else {
+		log.Println("Please Set A Function To Be Called Upon New Updates")
+		return
+	}
+
+}
+
+func (b *Bot) AnswerCallback(callbackID string) {
 	link := b.ApiUrl + "/answerCallbackQuery"
 
 	answer := AnswerCallback{
@@ -62,7 +94,7 @@ func (b Bot) answerCallback(callbackID string) {
 	}
 }
 
-func (b Bot) sendMessage(s string, c Chat, k Keyboard) {
+func (b *Bot) SendMessage(s string, c Chat, k Keyboard) {
 
 	link := b.ApiUrl + "/sendMessage"
 
@@ -97,7 +129,7 @@ func (b Bot) sendMessage(s string, c Chat, k Keyboard) {
 	}
 }
 
-func (b Bot) editMessage(message Message, text string, k Keyboard) {
+func (b *Bot) EditMessage(message Message, text string, k Keyboard) {
 	link := b.ApiUrl + "/editMessageText"
 
 	updatedText := EditBody{
@@ -121,7 +153,7 @@ func (b Bot) editMessage(message Message, text string, k Keyboard) {
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
-		log.println("Couldn't Communicate With Telegram Servers, Please Check Internet Source")
+		log.Println("Couldn't Communicate With Telegram Servers, Please Check Internet Source")
 		log.Println(err)
 		return
 	}
