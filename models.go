@@ -2,72 +2,75 @@ package bot
 
 import "reflect"
 
+//Bot : Main Bot Struct
 type Bot struct {
-	Me         User
-	ApiUrl     string
+	Me         user
+	APIURL     string
 	Handler    reflect.Value
 	HandlerSet bool
 }
 
-type User struct {
-	Id        int    `json:"id"`
+type user struct {
+	ID        int    `json:"id"`
 	Firstname string `json:"first_name"`
 	Username  string `json:"username"`
 }
 
+//Update : Stores Data From Request
 type Update struct {
 	UpdateID      int           `json:"update_id"`
-	Message       Message       `json:"message"`
-	CallbackQuery CallbackQuery `json:"callback_query"`
+	Message       message       `json:"message"`
+	CallbackQuery callbackQuery `json:"callback_query"`
+	Command       string
 }
 
-type Message struct {
+type message struct {
 	MessageID int    `json:"message_id"`
 	Text      string `json:"Text"`
-	Chat      Chat   `json:"chat"`
-	From      User   `json:"from"`
+	Chat      chat   `json:"chat"`
+	From      user   `json:"from"`
 }
 
-type Chat struct {
+type chat struct {
 	ID int `json:"id"`
 }
 
-type InlineKeyboard struct {
+type inlineKeyboard struct {
 	Text string `json:"text"`
 	Data string `json:"callback_data"`
 }
 
-type ReplyBody struct {
+type replyBody struct {
 	ChatID      string      `json:"chat_id,omitempty"`
 	Text        string      `json:"text,omitempty"`
 	ParseMode   string      `json:"parse_mode,omitempty"`
-	ReplyMarkup ReplyMarkup `json:"reply_markup,omitempty"`
+	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
 }
 
-type ReplyMarkup struct {
-	InlineKeyboard [][]InlineKeyboard `json:"inline_keyboard,omitempty"`
+type replyMarkup struct {
+	InlineKeyboard [][]inlineKeyboard `json:"inline_keyboard,omitempty"`
 }
 
-type CallbackQuery struct {
-	Id      string  `json:"id"`
-	From    User    `json:"from"`
+type callbackQuery struct {
+	ID      string  `json:"id"`
+	From    user    `json:"from"`
 	Data    string  `json:"data"`
-	Message Message `json:"message"`
+	Message message `json:"message"`
 }
 
-type AnswerCallback struct {
-	Id   string `json:"callback_query_id"`
+type answerCallback struct {
+	ID   string `json:"callback_query_id"`
 	Text string `json:"text,omitempty"`
 }
 
-type EditBody struct {
+type editBody struct {
 	MessageID   int         `json:"message_id"`
 	Text        string      `json:"text"`
 	ChatID      string      `json:"chat_id"`
-	ReplyMarkup ReplyMarkup `json:"reply_markup,omitempty"`
+	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
 }
 
-type Keyboard struct {
-	Buttons  []InlineKeyboard
-	Keyboard [][]InlineKeyboard
+type keyboard struct {
+	Buttons  []inlineKeyboard
+	Keyboard [][]inlineKeyboard
 }
