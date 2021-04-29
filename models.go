@@ -8,6 +8,7 @@ type Bot struct {
 	APIURL     string
 	Handler    reflect.Value
 	HandlerSet bool
+	Keyboard   keyboard
 }
 
 type user struct {
