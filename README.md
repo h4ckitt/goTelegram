@@ -1,2 +1,4 @@
 # TGBot
-Very Small Telegram Library Written In Golangyoruba-codigy/tgbot
+Very Small Telegram Library Written In Golang
+
+yoruba-codigy/tgbot
