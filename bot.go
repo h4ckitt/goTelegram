@@ -11,25 +11,21 @@ import (
 )
 
 func NewBot(s string) Bot {
-	return Bot{APIURL: "https://api.telegram.org/bot" + s}
+	return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]inlineKeyboard{}}}
 }
 
-func NewInlineKeyboard() keyboard {
-	return keyboard{Keyboard: [][]inlineKeyboard{}}
+func (b *Bot) AddButton(text, callback string) {
+	b.Keyboard.Buttons = append(b.Keyboard.Buttons, inlineKeyboard{Text: text, Data: callback})
 }
 
-func (k *keyboard) AddButton(text, callback string) {
-	k.Buttons = append(k.Buttons, inlineKeyboard{Text: text, Data: callback})
+func (b *Bot) MakeKeyboardRow() {
+	b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
+	b.Keyboard.Buttons = nil
 }
 
-func (k *keyboard) MakeKeyboardRow() {
-	k.Keyboard = append(k.Keyboard, k.Buttons)
-	k.Buttons = nil
-}
-
-func (k *keyboard) DeleteKeyboard() {
-	k.Buttons = nil
-	k.Keyboard = nil
+func (b *Bot) DeleteKeyboard() {
+	b.Keyboard.Keyboard = nil
+	b.Keyboard.Buttons = nil
 }
 
 func (b *Bot) SetHandler(fn interface{}) {
@@ -98,7 +94,7 @@ func (b *Bot) AnswerCallback(callbackID string) {
 	}
 }
 
-func (b *Bot) SendMessage(s string, c chat, k keyboard) {
+func (b *Bot) SendMessage(s string, c chat) {
 
 	link := b.APIURL + "/sendMessage"
 
@@ -107,8 +103,8 @@ func (b *Bot) SendMessage(s string, c chat, k keyboard) {
 		Text:   s,
 	}
 
-	if len(k.Keyboard) > 0 {
-		reply.ReplyMarkup.InlineKeyboard = k.Keyboard
+	if len(b.Keyboard.Keyboard) > 0 {
+		reply.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
 	}
 
 	jsonBody, err := json.Marshal(reply)
@@ -133,7 +129,7 @@ func (b *Bot) SendMessage(s string, c chat, k keyboard) {
 	}
 }
 
-func (b *Bot) EditMessage(message message, text string, k keyboard) {
+func (b *Bot) EditMessage(message message, text string) {
 	link := b.APIURL + "/editMessageText"
 
 	updatedText := editBody{
@@ -142,8 +138,8 @@ func (b *Bot) EditMessage(message message, text string, k keyboard) {
 		Text:      text,
 	}
 
-	if len(k.Keyboard) > 0 {
-		updatedText.ReplyMarkup.InlineKeyboard = k.Keyboard
+	if len(b.Keyboard.Keyboard) > 0 {
+		updatedText.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
 	}
 
 	jsonBody, err := json.Marshal(updatedText)
