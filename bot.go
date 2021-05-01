@@ -3,6 +3,7 @@ package goTelegram
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"reflect"
@@ -10,8 +11,40 @@ import (
 	"strings"
 )
 
-func NewBot(s string) Bot {
-	return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]inlineKeyboard{}}}
+func NewBot(s string) (Bot, error) {
+
+	var newBot Bot
+
+	newBot.APIURL = "https://api.telegram.org/bot" + s
+
+	newBot.Keyboard = keyboard{Keyboard: [][]inlineKeyboard{}}
+
+	resp, err := http.Get(newBot.APIURL + "/getMe")
+
+	if err != nil {
+		log.Println("Fetch Bot Details Failed, Check Internet Connection")
+		log.Println(err)
+		return newBot, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Invalid Token Provided")
+		return newBot, errors.New("Invalid Bot Token Provided")
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&newBot)
+
+	if err != nil {
+		log.Println("Couldn't Marshal Response")
+		log.Println(err)
+		return newBot, err
+	}
+
+	return newBot, nil
+
+	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]inlineKeyboard{}}}
 }
 
 func (b *Bot) AddButton(text, callback string) {
@@ -52,7 +85,20 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		update.Command = strings.Fields(update.Message.Text)[0]
+		text := strings.Fields(update.Message.Text)
+
+		if len(text) == 0 {
+			return
+		}
+
+		if strings.HasPrefix(text[0], "/") {
+
+			update.Command = text[0]
+
+			if strings.HasSuffix(text[0], b.Me.Username) {
+				update.Command = strings.Split(text[0], "@")[0]
+			}
+		}
 
 		rarg := make([]reflect.Value, 1)
 
