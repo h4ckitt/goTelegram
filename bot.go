@@ -47,8 +47,12 @@ func NewBot(s string) (Bot, error) {
 	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]InlineKeyboard{}}}
 }
 
-func (b *Bot) MakeKeyboard(buttons []InlineKeyboard) {
-	maxCol := 3 //Hard Coded Value, Would Change Later
+func (b *Bot) MakeKeyboard(buttons []InlineKeyboard, maxCol int) {
+
+	if maxCol < 1 {
+		log.Println("Maximum Number Of Columns Cannot Be Less Than 1")
+		return
+	}
 
 	for index, button := range buttons {
 
