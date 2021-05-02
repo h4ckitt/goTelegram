@@ -4,7 +4,7 @@ import "reflect"
 
 //Bot : Main Bot Struct
 type Bot struct {
-	Me         user
+	Me         user `json:"result"`
 	APIURL     string
 	Handler    reflect.Value
 	HandlerSet bool
@@ -36,7 +36,7 @@ type chat struct {
 	ID int `json:"id"`
 }
 
-type inlineKeyboard struct {
+type InlineKeyboard struct {
 	Text string `json:"text"`
 	Data string `json:"callback_data"`
 }
@@ -49,7 +49,7 @@ type replyBody struct {
 }
 
 type replyMarkup struct {
-	InlineKeyboard [][]inlineKeyboard `json:"inline_keyboard,omitempty"`
+	InlineKeyboard [][]InlineKeyboard `json:"inline_keyboard,omitempty"`
 }
 
 type callbackQuery struct {
@@ -72,6 +72,6 @@ type editBody struct {
 }
 
 type keyboard struct {
-	Buttons  []inlineKeyboard
-	Keyboard [][]inlineKeyboard
+	Buttons  []InlineKeyboard
+	Keyboard [][]InlineKeyboard
 }
