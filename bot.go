@@ -17,7 +17,7 @@ func NewBot(s string) (Bot, error) {
 
 	newBot.APIURL = "https://api.telegram.org/bot" + s
 
-	newBot.Keyboard = keyboard{Keyboard: [][]inlineKeyboard{}}
+	newBot.Keyboard = keyboard{Keyboard: [][]InlineKeyboard{}}
 
 	resp, err := http.Get(newBot.APIURL + "/getMe")
 
@@ -44,16 +44,26 @@ func NewBot(s string) (Bot, error) {
 
 	return newBot, nil
 
-	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]inlineKeyboard{}}}
+	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]InlineKeyboard{}}}
 }
 
-func (b *Bot) AddButton(text, callback string) {
-	b.Keyboard.Buttons = append(b.Keyboard.Buttons, inlineKeyboard{Text: text, Data: callback})
-}
+func (b *Bot) MakeKeyboard(buttons []InlineKeyboard) {
+	maxCol := 3 //Hard Coded Value, Would Change Later
 
-func (b *Bot) MakeKeyboardRow() {
-	b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
-	b.Keyboard.Buttons = nil
+	for index, button := range buttons {
+
+		if (index+1)%maxCol != 0 {
+			b.Keyboard.Buttons = append(b.Keyboard.Buttons, button)
+		} else {
+			b.Keyboard.Buttons = append(b.Keyboard.Buttons, button)
+			b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
+			b.Keyboard.Buttons = nil
+		}
+	}
+
+	if len(b.Keyboard.Buttons) > 0 {
+		b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
+	}
 }
 
 func (b *Bot) DeleteKeyboard() {
