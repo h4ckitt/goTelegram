@@ -101,17 +101,21 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 		text := strings.Fields(update.Message.Text)
 
-		if len(text) == 0 {
-			return
-		}
+		if len(text) > 0 {
+			update.Type = "text"
 
-		if strings.HasPrefix(text[0], "/") {
+			if strings.HasPrefix(text[0], "/") {
 
-			update.Command = text[0]
+				update.Command = text[0]
 
-			if strings.HasSuffix(text[0], b.Me.Username) {
-				update.Command = strings.Split(text[0], "@")[0]
+				if strings.HasSuffix(text[0], b.Me.Username) {
+					update.Command = strings.Split(text[0], "@")[0]
+				}
+
 			}
+		} else if update.CallbackQuery.ID != "" {
+
+			update.Type = "callback"
 		}
 
 		rarg := make([]reflect.Value, 1)
