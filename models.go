@@ -23,6 +23,7 @@ type Update struct {
 	Message       message       `json:"message"`
 	CallbackQuery callbackQuery `json:"callback_query"`
 	Command       string
+	Type          string
 }
 
 type message struct {
