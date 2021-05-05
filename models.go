@@ -34,7 +34,8 @@ type message struct {
 }
 
 type chat struct {
-	ID int `json:"id"`
+	ID   int    `json:"id"`
+	Type string `json:"type"`
 }
 
 type InlineKeyboard struct {
