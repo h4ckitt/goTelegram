@@ -47,7 +47,15 @@ func NewBot(s string) (Bot, error) {
 	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]InlineKeyboard{}}}
 }
 
-func (b *Bot) MakeKeyboard(buttons []InlineKeyboard, maxCol int) {
+func (b *Bot) AddButton(text, callback string) {
+	b.Keyboard.Buttons = append(b.Keyboard.Buttons, InlineKeyboard{Text: text, Data: callback})
+}
+
+func (b *Bot) MakeKeyboard(maxCol int) {
+
+	buttons := b.Keyboard.Buttons
+
+	b.Keyboard.Buttons = nil
 
 	if maxCol < 1 {
 		log.Println("Maximum Number Of Columns Cannot Be Less Than 1")
