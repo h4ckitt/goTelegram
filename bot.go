@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"strings"
 )
 
+//NewBot : Create A New Bot
 func NewBot(s string) (Bot, error) {
 
 	var newBot Bot
@@ -47,10 +49,12 @@ func NewBot(s string) (Bot, error) {
 	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]InlineKeyboard{}}}
 }
 
+//AddButton : Add Buttons For InlineKeyboard
 func (b *Bot) AddButton(text, callback string) {
 	b.Keyboard.Buttons = append(b.Keyboard.Buttons, InlineKeyboard{Text: text, Data: callback})
 }
 
+//MakeKeyboard : Create Final Keyboard To Be Sent
 func (b *Bot) MakeKeyboard(maxCol int) {
 
 	buttons := b.Keyboard.Buttons
@@ -78,11 +82,13 @@ func (b *Bot) MakeKeyboard(maxCol int) {
 	}
 }
 
+//DeleteKeyboard : Delete Current Keyboard
 func (b *Bot) DeleteKeyboard() {
 	b.Keyboard.Keyboard = nil
 	b.Keyboard.Buttons = nil
 }
 
+//SetHandler : Set Function To Be Run When New Updates Are Received
 func (b *Bot) SetHandler(fn interface{}) {
 	b.HandlerSet = false
 	b.Handler = reflect.ValueOf(fn)
@@ -94,11 +100,13 @@ func (b *Bot) SetHandler(fn interface{}) {
 	b.HandlerSet = true
 }
 
+//UpdateHandler : Handles New Updates From Telegram
 func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if b.HandlerSet {
 
 		var update Update
+		var text []string
 
 		err := json.NewDecoder(r.Body).Decode(&update)
 
@@ -107,10 +115,18 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		text := strings.Fields(update.Message.Text)
+		if len(update.EditedMessage.Text) > 0 {
+			update.Type = "edited_text"
+			text = strings.Fields(update.EditedMessage.Text)
+		} else if len(update.Message.Text) > 0 {
+			update.Type = "text"
+			text = strings.Fields(update.Message.Text)
+		} else if update.CallbackQuery.ID != "" {
+
+			update.Type = "callback"
+		}
 
 		if len(text) > 0 {
-			update.Type = "text"
 
 			if strings.HasPrefix(text[0], "/") {
 
@@ -121,9 +137,6 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 				}
 
 			}
-		} else if update.CallbackQuery.ID != "" {
-
-			update.Type = "callback"
 		}
 
 		rarg := make([]reflect.Value, 1)
@@ -138,6 +151,7 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+//AnswerCallback : Answer Call Back Query From InlineKeyboard
 func (b *Bot) AnswerCallback(callbackID string) {
 	link := b.APIURL + "/answerCallbackQuery"
 
@@ -162,10 +176,13 @@ func (b *Bot) AnswerCallback(callbackID string) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		//	body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Couldn't Answer CallBack Successfully, Status Code Not OK")
+		//	log.Println(string(body))
 	}
 }
 
+//SendMessage : Send A Message To A User
 func (b *Bot) SendMessage(s string, c chat) {
 
 	link := b.APIURL + "/sendMessage"
@@ -197,10 +214,13 @@ func (b *Bot) SendMessage(s string, c chat) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		//	body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
+		//	log.Println(string(body))
 	}
 }
 
+//EditMessage : Edit An Existing Message
 func (b *Bot) EditMessage(message message, text string) {
 	link := b.APIURL + "/editMessageText"
 
@@ -234,6 +254,39 @@ func (b *Bot) EditMessage(message message, text string) {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Message Wasn't Edited Successfully, Please Try Again")
+	}
+}
+
+//DeleteMessage : Delete The Specified Message
+func (b *Bot) DeleteMessage(message message) {
+	link := b.APIURL + "/deleteMessage"
+
+	deletion := deleteBody{
+		MessageID: message.MessageID,
+		ChatID:    strconv.Itoa(message.Chat.ID),
+	}
+
+	jsonBody, err := json.Marshal(deletion)
+
+	if err != nil {
+		log.Println("There Was An Erro Marshalling The Object")
 		log.Println(err)
+		return
+	}
+
+	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		log.Println("Couldn't Complete Message Deletion Request, Please Check Internet Source")
+		log.Println(err)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Message Couldn't Be Deleted Successfully")
+		log.Println(string(body))
 	}
 }
