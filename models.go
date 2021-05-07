@@ -20,6 +20,7 @@ type user struct {
 //Update : Stores Data From Request
 type Update struct {
 	UpdateID      int           `json:"update_id"`
+	EditedMessage message       `json:"edited_message"`
 	Message       message       `json:"message"`
 	CallbackQuery callbackQuery `json:"callback_query"`
 	Command       string
@@ -38,6 +39,7 @@ type chat struct {
 	Type string `json:"type"`
 }
 
+//InlineKeyboard : Structure To Hold The Keyboard To Be Sent
 type InlineKeyboard struct {
 	Text string `json:"text"`
 	Data string `json:"callback_data"`
@@ -71,6 +73,11 @@ type editBody struct {
 	Text        string      `json:"text"`
 	ChatID      string      `json:"chat_id"`
 	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
+}
+
+type deleteBody struct {
+	MessageID int    `json:"message_id"`
+	ChatID    string `json:"chat_id"`
 }
 
 type keyboard struct {
