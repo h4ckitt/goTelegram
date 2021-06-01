@@ -90,20 +90,20 @@ func (b *Bot) DeleteKeyboard() {
 
 //SetHandler : Set Function To Be Run When New Updates Are Received
 func (b *Bot) SetHandler(fn interface{}) {
-	b.HandlerSet = false
-	b.Handler = reflect.ValueOf(fn)
-	if b.Handler.Kind() != reflect.Func {
+	b.handlerSet = false
+	b.handler = reflect.ValueOf(fn)
+	if b.handler.Kind() != reflect.Func {
 		log.Println("Argument Is Not Of Type Function")
 		return
 	}
 
-	b.HandlerSet = true
+	b.handlerSet = true
 }
 
 //UpdateHandler : Handles New Updates From Telegram
 func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
-	if b.HandlerSet {
+	if b.handlerSet {
 
 		var update Update
 		var text []string
