@@ -6,8 +6,8 @@ import "reflect"
 type Bot struct {
 	Me         user `json:"result"`
 	APIURL     string
-	Handler    reflect.Value
-	HandlerSet bool
+	handler    reflect.Value
+	handlerSet bool
 	Keyboard   keyboard
 }
 
