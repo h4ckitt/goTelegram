@@ -143,7 +143,7 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 		rarg[0] = reflect.ValueOf(update)
 
-		go b.Handler.Call(rarg)
+		go b.handler.Call(rarg)
 	} else {
 		log.Println("Please Set A Function To Be Called Upon New Updates")
 		return
