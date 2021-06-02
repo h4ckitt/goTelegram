@@ -89,15 +89,17 @@ func (b *Bot) DeleteKeyboard() {
 }
 
 //SetHandler : Set Function To Be Run When New Updates Are Received
-func (b *Bot) SetHandler(fn interface{}) {
+func (b *Bot) SetHandler(fn interface{}) bool {
 	b.handlerSet = false
 	b.handler = reflect.ValueOf(fn)
 	if b.handler.Kind() != reflect.Func {
 		log.Println("Argument Is Not Of Type Function")
-		return
+		return false
 	}
 
 	b.handlerSet = true
+
+	return true
 }
 
 //UpdateHandler : Handles New Updates From Telegram
@@ -152,7 +154,7 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //AnswerCallback : Answer Call Back Query From InlineKeyboard
-func (b *Bot) AnswerCallback(callbackID string) {
+func (b *Bot) AnswerCallback(callbackID string) error {
 	link := b.APIURL + "/answerCallbackQuery"
 
 	answer := answerCallback{
@@ -162,28 +164,29 @@ func (b *Bot) AnswerCallback(callbackID string) {
 	jsonBody, err := json.Marshal(answer)
 
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
 		log.Println("Couldn't Answer CallBack Successfully, Check Internet Source")
-		return
+		return err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		//	body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Couldn't Answer CallBack Successfully, Status Code Not OK")
-		//	log.Println(string(body))
+		return errors.New(string(body))
 	}
+
+	return nil
 }
 
 //SendMessage : Send A Message To A User
-func (b *Bot) SendMessage(s string, c chat) {
+func (b *Bot) SendMessage(s string, c chat) error {
 
 	link := b.APIURL + "/sendMessage"
 
@@ -200,28 +203,30 @@ func (b *Bot) SendMessage(s string, c chat) {
 
 	if err != nil {
 		log.Println("Couldn't Marshal Response")
-		return
+		return err
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
+		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Couldn't Make Request Successfully, Please Check Internet Source")
-		log.Println(err)
-		return
+		return errors.New(string(body))
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		//	body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
-		//	log.Println(string(body))
+		return errors.New(string(body))
 	}
+
+	return nil
 }
 
 //EditMessage : Edit An Existing Message
-func (b *Bot) EditMessage(message message, text string) {
+func (b *Bot) EditMessage(message message, text string) error {
 	link := b.APIURL + "/editMessageText"
 
 	updatedText := editBody{
@@ -238,8 +243,7 @@ func (b *Bot) EditMessage(message message, text string) {
 
 	if err != nil {
 		log.Println("There Was An Error Marshalling The Message")
-		log.Println(err)
-		return
+		return err
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
@@ -247,18 +251,23 @@ func (b *Bot) EditMessage(message message, text string) {
 	if err != nil {
 		log.Println("Couldn't Communicate With Telegram Servers, Please Check Internet Source")
 		log.Println(err)
-		return
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Wasn't Edited Successfully, Please Try Again")
+		return errors.New(string(body))
 	}
+
+	return nil
 }
 
 //DeleteMessage : Delete The Specified Message
-func (b *Bot) DeleteMessage(message message) {
+func (b *Bot) DeleteMessage(message message) error {
 	link := b.APIURL + "/deleteMessage"
 
 	deletion := deleteBody{
@@ -269,17 +278,16 @@ func (b *Bot) DeleteMessage(message message) {
 	jsonBody, err := json.Marshal(deletion)
 
 	if err != nil {
-		log.Println("There Was An Erro Marshalling The Object")
-		log.Println(err)
-		return
+		log.Println("There Was An Error Marshalling The Object")
+		return err
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
 		log.Println("Couldn't Complete Message Deletion Request, Please Check Internet Source")
-		log.Println(err)
-		return
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
 	}
 
 	defer resp.Body.Close()
@@ -287,6 +295,8 @@ func (b *Bot) DeleteMessage(message message) {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Couldn't Be Deleted Successfully")
-		log.Println(string(body))
+		return errors.New(string(body))
 	}
+
+	return nil
 }
