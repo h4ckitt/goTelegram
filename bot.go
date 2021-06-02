@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -298,5 +303,82 @@ func (b *Bot) DeleteMessage(message message) error {
 		return errors.New(string(body))
 	}
 
+	return nil
+}
+
+func (b *Bot) SendVideo(file string, caption string, c chat) error {
+	link := b.APIURL + "/sendVideo"
+
+	if regexp.MustCompile("^(https?)").MatchString(file) {
+		jsonBody, err := json.Marshal(videoBody{
+			ChatID:    strconv.Itoa(c.ID),
+			VideoLink: file,
+			Caption:   caption,
+		})
+
+		if err != nil {
+			log.Println("There Was An Error Marshalling The Object")
+			return err
+		}
+
+		resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+		if err != nil {
+			log.Println("Video Couldn't Be Sent Successfully, Please Check Internet Source")
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			log.Println("Video Not Sent Successfully, Check Error Logs For More Details")
+			body, _ := ioutil.ReadAll(resp.Body)
+			return errors.New(string(body))
+		}
+
+	}
+
+	vid, err := os.Open(file)
+
+	if err != nil {
+		log.Println("Couldn't Open Specified File For Reading")
+		return err
+	}
+
+	defer vid.Close()
+
+	body := new(bytes.Buffer)
+
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("video", filepath.Base(file))
+
+	io.Copy(part, vid)
+
+	writer.WriteField("chat_id", strconv.Itoa(c.ID))
+
+	if caption != "" {
+		writer.WriteField("caption", caption)
+	}
+
+	writer.Close()
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", link, body)
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Println("Couldn't Send Video, Check Internet Connection")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Video Not Sent Successfully, Check Error Logs For Details")
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
+	}
 	return nil
 }
