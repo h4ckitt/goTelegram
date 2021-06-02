@@ -52,6 +52,12 @@ type replyBody struct {
 	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
 }
 
+type videoBody struct {
+	ChatID    string      `json:"chat_id"`
+	VideoLink interface{} `json:"video"`
+	Caption   string      `json:"caption,omitempty"`
+}
+
 type replyMarkup struct {
 	InlineKeyboard [][]InlineKeyboard `json:"inline_keyboard,omitempty"`
 }
