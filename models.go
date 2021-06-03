@@ -50,6 +50,7 @@ type replyBody struct {
 	Text        string      `json:"text,omitempty"`
 	ParseMode   string      `json:"parse_mode,omitempty"`
 	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
+	Reply       int         `json:"reply_to_message_id"`
 }
 
 type videoBody struct {
