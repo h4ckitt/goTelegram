@@ -30,7 +30,6 @@ func NewBot(s string) (Bot, error) {
 
 	if err != nil {
 		log.Println("Fetch Bot Details Failed, Check Internet Connection")
-		log.Println(err)
 		return newBot, err
 	}
 
