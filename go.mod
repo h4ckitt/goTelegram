@@ -1,3 +1,3 @@
-module github.com/yoruba-codigy/goTelegram/v2
+module github.com/yoruba-codigy/goTelegram
 
 go 1.15
