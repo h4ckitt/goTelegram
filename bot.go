@@ -230,6 +230,45 @@ func (b *Bot) SendMessage(s string, c chat) error {
 	return nil
 }
 
+func (b *Bot) ReplyMessage(s string, m message) error {
+	link := b.APIURL + "/sendMessage"
+
+	reply := replyBody{
+		ChatID: strconv.Itoa(m.Chat.ID),
+		Text:   s,
+		Reply:  m.MessageID,
+	}
+
+	if len(b.Keyboard.Keyboard) > 0 {
+		reply.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
+	}
+
+	jsonBody, err := json.Marshal(reply)
+
+	if err != nil {
+		log.Println("Couldn't Marshal Response")
+		return err
+	}
+
+	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Couldn't Make Request Successfully, Please Check Internet Source")
+		return errors.New(string(body))
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Message Wasn't Sent Successfully, Please Try Again")
+		return errors.New(string(body))
+	}
+
+	return nil
+}
+
 //EditMessage : Edit An Existing Message
 func (b *Bot) EditMessage(message message, text string) error {
 	link := b.APIURL + "/editMessageText"
