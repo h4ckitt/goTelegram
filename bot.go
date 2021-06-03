@@ -375,6 +375,7 @@ func (b *Bot) SendVideo(file string, caption string, c chat) error {
 			return errors.New(string(body))
 		}
 
+		return nil
 	}
 
 	vid, err := os.Open(file)
