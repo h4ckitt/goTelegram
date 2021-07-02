@@ -27,11 +27,30 @@ type Update struct {
 	Type          string
 }
 
+type result struct {
+	File fileDets `json:"result"`
+}
+
+type fileDets struct {
+	FileID       string `json:"file_id"`
+	FileUniqueID string `json:"file_unique_id"`
+	FileSize     int    `json:"file_size"`
+	FilePath     string `json:"file_path"`
+}
+
 type message struct {
-	MessageID int    `json:"message_id"`
-	Text      string `json:"Text"`
-	Chat      chat   `json:"chat"`
-	From      user   `json:"from"`
+	MessageID int      `json:"message_id"`
+	Text      string   `json:"Text"`
+	Chat      chat     `json:"chat"`
+	From      user     `json:"from"`
+	File      document `json:"document"`
+}
+
+type document struct {
+	FileID       string `json:"file_id"`
+	FileUniqueID string `json:"file_unique_id"`
+	FileName     string `json:"file_name"`
+	FileSize     int    `json:"file_size"`
 }
 
 type chat struct {
