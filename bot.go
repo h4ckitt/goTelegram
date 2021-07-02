@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -37,7 +38,7 @@ func NewBot(s string) (Bot, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Invalid Token Provided")
-		return newBot, errors.New("Invalid Bot Token Provided")
+		return newBot, errors.New("invalid Bot Token Provided")
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&newBot)
@@ -130,6 +131,8 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		} else if update.CallbackQuery.ID != "" {
 
 			update.Type = "callback"
+		} else if len(update.Message.File.FileName) > 0 {
+			update.Type = "document"
 		}
 
 		if len(text) > 0 {
@@ -263,6 +266,65 @@ func (b *Bot) ReplyMessage(s string, m message) error {
 		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
 		return errors.New(string(body))
+	}
+
+	return nil
+}
+
+func (b *Bot) GetFile(fileId, filename string) error {
+	var res result
+
+	//	link := strings.Join(strings.Split(b.APIURL, "bot")[0] + "/file/"
+	splitLink := strings.Split(b.APIURL, "bot")
+	link := b.APIURL + "/getFile"
+	jsonBody, err := json.Marshal(struct {
+		FileID string `json:"file_id"`
+	}{
+		fileId,
+	})
+
+	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
+	}
+
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&res)
+
+	if err != nil {
+		return err
+	}
+
+	file := res.File
+	fmt.Println("File Path: ", file.FilePath)
+	resp, err = http.Get(splitLink[0] + "/file/bot" + splitLink[1] + "/" + file.FilePath)
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
+	}
+
+	file_name, err := os.Create(filename)
+
+	if err != nil {
+		return err
+	}
+
+	defer file_name.Close()
+
+	_, err = io.Copy(file_name, resp.Body)
+
+	if err != nil {
+		return err
 	}
 
 	return nil
