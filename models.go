@@ -90,8 +90,9 @@ type callbackQuery struct {
 }
 
 type answerCallback struct {
-	ID   string `json:"callback_query_id"`
-	Text string `json:"text,omitempty"`
+	ID        string `json:"callback_query_id"`
+	Text      string `json:"text,omitempty"`
+	ShowAlert string `json:"show_alert"`
 }
 
 type editBody struct {
