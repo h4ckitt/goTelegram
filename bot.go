@@ -161,11 +161,21 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //AnswerCallback : Answer Call Back Query From InlineKeyboard
-func (b *Bot) AnswerCallback(callbackID string) error {
+func (b *Bot) AnswerCallback(callbackID, text string, showAlert bool) error {
 	link := b.APIURL + "/answerCallbackQuery"
 
 	answer := answerCallback{
 		ID: callbackID,
+	}
+
+	if text != "" {
+		answer.Text = text
+	}
+
+	if showAlert {
+		answer.ShowAlert = "true"
+	} else {
+		answer.ShowAlert = "false"
 	}
 
 	jsonBody, err := json.Marshal(answer)
