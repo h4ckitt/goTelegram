@@ -440,41 +440,6 @@ func (b *Bot) DeleteMessage(message Message) error {
 	return nil
 }
 
-//DeleteMessage : Delete The Specified Message
-func (b *Bot) DeleteMessage(message message) error {
-	link := b.APIURL + "/deleteMessage"
-
-	deletion := deleteBody{
-		MessageID: message.MessageID,
-		ChatID:    strconv.Itoa(message.Chat.ID),
-	}
-
-	jsonBody, err := json.Marshal(deletion)
-
-	if err != nil {
-		log.Println("There Was An Error Marshalling The Object")
-		return err
-	}
-
-	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
-
-	if err != nil {
-		log.Println("Couldn't Complete Message Deletion Request, Please Check Internet Source")
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(body))
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Message Couldn't Be Deleted Successfully")
-		return errors.New(string(body))
-	}
-
-	return nil
-}
-
 func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 
 	link := b.APIURL + "/sendVideo"

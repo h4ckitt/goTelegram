@@ -20,28 +20,6 @@ type user struct {
 //Update : Stores Data From Request
 type Update struct {
 	UpdateID      int           `json:"update_id"`
-	EditedMessage message       `json:"edited_message"`
-	Message       message       `json:"message"`
-	CallbackQuery callbackQuery `json:"callback_query"`
-	Command       string
-	Type          string
-}
-
-type result struct {
-	File fileDets `json:"result"`
-}
-
-type fileDets struct {
-	FileID       string `json:"file_id"`
-	FileUniqueID string `json:"file_unique_id"`
-	FileSize     int    `json:"file_size"`
-	FilePath     string `json:"file_path"`
-}
-
-type message struct {
-	MessageID     int           `json:"message_id"`
-	Text          string        `json:"Text"`
-	Chat          Chat          `json:"chat"`
 	EditedMessage Message       `json:"edited_message"`
 	Message       Message       `json:"message"`
 	CallbackQuery callbackQuery `json:"callback_query"`
