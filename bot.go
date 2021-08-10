@@ -203,7 +203,7 @@ func (b *Bot) AnswerCallback(callbackID, text string, showAlert bool) error {
 }
 
 //SendMessage : Send A Message To A User
-func (b *Bot) SendMessage(s string, c chat) error {
+func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 
 	link := b.APIURL + "/sendMessage"
 
@@ -220,7 +220,8 @@ func (b *Bot) SendMessage(s string, c chat) error {
 
 	if err != nil {
 		log.Println("Couldn't Marshal Response")
-		return err
+		return Message{}, err
+
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
@@ -228,7 +229,7 @@ func (b *Bot) SendMessage(s string, c chat) error {
 	if err != nil {
 		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Couldn't Make Request Successfully, Please Check Internet Source")
-		return errors.New(string(body))
+		return Message{}, errors.New(string(body))
 	}
 
 	defer resp.Body.Close()
@@ -236,13 +237,24 @@ func (b *Bot) SendMessage(s string, c chat) error {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
-		return errors.New(string(body))
+		return Message{}, errors.New(string(body))
 	}
 
-	return nil
+	var response TResponse
+	var newMessage Message
+
+	err = json.NewDecoder(resp.Body).Decode(&response)
+
+	newMessage = Message{
+		MessageID: response.Result.MessageId,
+		Chat:      response.Result.Chat,
+		From:      response.Result.From,
+	}
+
+	return newMessage, nil
 }
 
-func (b *Bot) ReplyMessage(s string, m message) error {
+func (b *Bot) ReplyMessage(s string, m Message) error {
 	link := b.APIURL + "/sendMessage"
 
 	reply := replyBody{
@@ -341,12 +353,13 @@ func (b *Bot) GetFile(fileId, filename string) error {
 }
 
 //EditMessage : Edit An Existing Message
-func (b *Bot) EditMessage(message message, text string) error {
+func (b *Bot) EditMessage(m Message, text string) (Message, error) {
+
 	link := b.APIURL + "/editMessageText"
 
 	updatedText := editBody{
-		ChatID:    strconv.Itoa(message.Chat.ID),
-		MessageID: message.MessageID,
+		ChatID:    strconv.Itoa(m.Chat.ID),
+		MessageID: m.MessageID,
 		Text:      text,
 	}
 
@@ -358,7 +371,7 @@ func (b *Bot) EditMessage(message message, text string) error {
 
 	if err != nil {
 		log.Println("There Was An Error Marshalling The Message")
-		return err
+		return Message{}, err
 	}
 
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
@@ -366,6 +379,52 @@ func (b *Bot) EditMessage(message message, text string) error {
 	if err != nil {
 		log.Println("Couldn't Communicate With Telegram Servers, Please Check Internet Source")
 		log.Println(err)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return Message{}, errors.New(string(body))
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Message Wasn't Edited Successfully, Please Try Again")
+		return Message{}, errors.New(string(body))
+	}
+
+	var response TResponse
+	var newMessage Message
+
+	err = json.NewDecoder(resp.Body).Decode(&response)
+
+	newMessage = Message{
+		MessageID: response.Result.MessageId,
+		Chat:      response.Result.Chat,
+		From:      response.Result.From,
+	}
+
+	defer resp.Body.Close()
+
+	return newMessage, nil
+}
+
+//DeleteMessage : Delete The Specified Message
+func (b *Bot) DeleteMessage(message Message) error {
+	link := b.APIURL + "/deleteMessage"
+
+	deletion := deleteBody{
+		MessageID: message.MessageID,
+		ChatID:    strconv.Itoa(message.Chat.ID),
+	}
+
+	jsonBody, err := json.Marshal(deletion)
+
+	if err != nil {
+		log.Println("There Was An Error Marshalling The Object")
+		return err
+	}
+
+	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		log.Println("Couldn't Complete Message Deletion Request, Please Check Internet Source")
 		body, _ := ioutil.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
@@ -416,7 +475,8 @@ func (b *Bot) DeleteMessage(message message) error {
 	return nil
 }
 
-func (b *Bot) SendVideo(file string, caption string, c chat) error {
+func (b *Bot) SendVideo(file string, caption string, c Chat) error {
+
 	link := b.APIURL + "/sendVideo"
 
 	if regexp.MustCompile("^(https?)").MatchString(file) {

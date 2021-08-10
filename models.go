@@ -39,9 +39,31 @@ type fileDets struct {
 }
 
 type message struct {
+	MessageID     int           `json:"message_id"`
+	Text          string        `json:"Text"`
+	Chat          Chat          `json:"chat"`
+	EditedMessage Message       `json:"edited_message"`
+	Message       Message       `json:"message"`
+	CallbackQuery callbackQuery `json:"callback_query"`
+	Command       string
+	Type          string
+}
+
+type result struct {
+	File fileDets `json:"result"`
+}
+
+type fileDets struct {
+	FileID       string `json:"file_id"`
+	FileUniqueID string `json:"file_unique_id"`
+	FileSize     int    `json:"file_size"`
+	FilePath     string `json:"file_path"`
+}
+
+type Message struct {
 	MessageID int      `json:"message_id"`
 	Text      string   `json:"Text"`
-	Chat      chat     `json:"chat"`
+	Chat      Chat     `json:"chat"`
 	From      user     `json:"from"`
 	File      document `json:"document"`
 }
@@ -53,7 +75,7 @@ type document struct {
 	FileSize     int    `json:"file_size"`
 }
 
-type chat struct {
+type Chat struct {
 	ID   int    `json:"id"`
 	Type string `json:"type"`
 }
@@ -86,7 +108,7 @@ type callbackQuery struct {
 	ID      string  `json:"id"`
 	From    user    `json:"from"`
 	Data    string  `json:"data"`
-	Message message `json:"message"`
+	Message Message `json:"message"`
 }
 
 type answerCallback struct {
@@ -110,4 +132,15 @@ type deleteBody struct {
 type keyboard struct {
 	Buttons  []InlineKeyboard
 	Keyboard [][]InlineKeyboard
+}
+
+type TResponse struct {
+	Ok     bool   `json:"ok"`
+	Result Result `json:"result"`
+}
+
+type Result struct {
+	MessageId int  `json:"message_id"`
+	From      user `json:"from"`
+	Chat      Chat `json:"chat"`
 }
