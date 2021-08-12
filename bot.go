@@ -218,7 +218,11 @@ func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 
 	jsonBody, err := json.Marshal(reply)
 
-	if err != nil {
+	if err != nil { // _, err := bot.SendMessage("Hello "+update.Message.From.Firstname, update.Message.Chat)
+		//
+		// if err != nil {
+		// 	log.Println(err)
+		// }
 		log.Println("Couldn't Marshal Response")
 		return Message{}, err
 
@@ -244,6 +248,10 @@ func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 	var newMessage Message
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
+
+	if err != nil {
+		return Message{}, err
+	}
 
 	newMessage = Message{
 		MessageID: response.Result.MessageId,
@@ -513,6 +521,85 @@ func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Video Not Sent Successfully, Check Error Logs For Details")
+		body, _ := ioutil.ReadAll(resp.Body)
+		return errors.New(string(body))
+	}
+	return nil
+}
+
+func (b *Bot) SendPhoto(file string, caption string, c Chat) error {
+
+	link := b.APIURL + "/sendPhoto"
+
+	if regexp.MustCompile("^(https?)").MatchString(file) {
+		jsonBody, err := json.Marshal(videoBody{
+			ChatID:    strconv.Itoa(c.ID),
+			VideoLink: file,
+			Caption:   caption,
+		})
+
+		if err != nil {
+			log.Println("There Was An Error Marshalling The Object")
+			return err
+		}
+
+		resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
+
+		if err != nil {
+			log.Println("Photo Couldn't Be Sent Successfully, Please Check Internet Source")
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			log.Println("Photo Not Sent Successfully, Check Error Logs For More Details")
+			body, _ := ioutil.ReadAll(resp.Body)
+			return errors.New(string(body))
+		}
+
+		return nil
+	}
+
+	photo, err := os.Open(file)
+
+	if err != nil {
+		log.Println("Couldn't Open Specified File For Reading")
+		return err
+	}
+
+	defer photo.Close()
+
+	body := new(bytes.Buffer)
+
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("photo", filepath.Base(file))
+
+	io.Copy(part, photo)
+
+	writer.WriteField("chat_id", strconv.Itoa(c.ID))
+
+	if caption != "" {
+		writer.WriteField("caption", caption)
+	}
+
+	writer.Close()
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", link, body)
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Println("Couldn't Send Photo, Check Internet Connection")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Photo Not Sent Successfully, Check Error Logs For Details")
 		body, _ := ioutil.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
