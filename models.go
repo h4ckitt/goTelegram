@@ -2,13 +2,13 @@ package goTelegram
 
 import "reflect"
 
-//Bot : Main Bot Struct
+// Bot : Main Bot Struct
 type Bot struct {
-	Me         user `json:"result"`
-	APIURL     string
-	handler    reflect.Value
-	handlerSet bool
-	Keyboard   keyboard
+	Me              user `json:"result"`
+	APIURL          string
+	handler         reflect.Value
+	handlerSet      bool
+	keyboardManager *keyboardManager
 }
 
 type user struct {
@@ -17,7 +17,7 @@ type user struct {
 	Username  string `json:"username"`
 }
 
-//Update : Stores Data From Request
+// Update : Stores Data From Request
 type Update struct {
 	UpdateID      int           `json:"update_id"`
 	EditedMessage Message       `json:"edited_message"`
@@ -58,7 +58,7 @@ type Chat struct {
 	Type string `json:"type"`
 }
 
-//InlineKeyboard : Structure To Hold The Keyboard To Be Sent
+// InlineKeyboard : Structure To Hold The Keyboard To Be Sent
 type InlineKeyboard struct {
 	Text string `json:"text"`
 	Data string `json:"callback_data"`
