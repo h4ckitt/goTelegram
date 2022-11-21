@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -18,14 +17,14 @@ import (
 	"strings"
 )
 
-//NewBot : Create A New Bot
+// NewBot : Create A New Bot
 func NewBot(s string) (Bot, error) {
 
 	var newBot Bot
 
 	newBot.APIURL = "https://api.telegram.org/bot" + s
 
-	newBot.Keyboard = keyboard{Keyboard: [][]InlineKeyboard{}}
+	newBot.keyboardManager = newKeyboardManager()
 
 	resp, err := http.Get(newBot.APIURL + "/getMe")
 
@@ -34,7 +33,7 @@ func NewBot(s string) (Bot, error) {
 		return newBot, err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Invalid Token Provided")
@@ -50,50 +49,37 @@ func NewBot(s string) (Bot, error) {
 	}
 
 	return newBot, nil
-
-	//return Bot{APIURL: "https://api.telegram.org/bot" + s, Keyboard: keyboard{Keyboard: [][]InlineKeyboard{}}}
 }
 
-//AddButton : Add Buttons For InlineKeyboard
-func (b *Bot) AddButton(text, callback string) {
-	b.Keyboard.Buttons = append(b.Keyboard.Buttons, InlineKeyboard{Text: text, Data: callback})
-}
+func (b *Bot) CreateKeyboard(chatId int, maxColumns ...int) {
+	maxCols := 3
 
-//MakeKeyboard : Create Final Keyboard To Be Sent
-func (b *Bot) MakeKeyboard(maxCol int) {
-
-	buttons := b.Keyboard.Buttons
-
-	b.Keyboard.Buttons = nil
-
-	if maxCol < 1 {
-		log.Println("Maximum Number Of Columns Cannot Be Less Than 1")
-		return
+	if len(maxColumns) > 0 {
+		maxCols = maxColumns[0]
 	}
 
-	for index, button := range buttons {
-
-		if (index+1)%maxCol != 0 {
-			b.Keyboard.Buttons = append(b.Keyboard.Buttons, button)
-		} else {
-			b.Keyboard.Buttons = append(b.Keyboard.Buttons, button)
-			b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
-			b.Keyboard.Buttons = nil
-		}
-	}
-
-	if len(b.Keyboard.Buttons) > 0 {
-		b.Keyboard.Keyboard = append(b.Keyboard.Keyboard, b.Keyboard.Buttons)
-	}
+	b.keyboardManager.CreateKeyboard(chatId, maxCols)
 }
 
-//DeleteKeyboard : Delete Current Keyboard
-func (b *Bot) DeleteKeyboard() {
-	b.Keyboard.Keyboard = nil
-	b.Keyboard.Buttons = nil
+// AddButtons : Add Buttons For InlineKeyboard
+func (b *Bot) AddButtons(chatID int, buttonData ...string) error {
+	if len(buttonData)%2 != 0 {
+		return errors.New("invalid Number Of Parameters Passed, It Should Be In Teh Format (buttonData, data, buttonData, data)")
+	}
+
+	for i := 0; i < len(buttonData); i += 2 {
+		b.keyboardManager.AddButton(chatID, buttonData[i], buttonData[i+1])
+	}
+
+	return nil
 }
 
-//SetHandler : Set Function To Be Run When New Updates Are Received
+// DeleteKeyboard : Delete Current Keyboard
+func (b *Bot) DeleteKeyboard(chatID int) {
+	b.keyboardManager.DeleteKeyboard(chatID)
+}
+
+// SetHandler : Set Function To Be Run When New Updates Are Received
 func (b *Bot) SetHandler(fn interface{}) bool {
 	b.handlerSet = false
 	b.handler = reflect.ValueOf(fn)
@@ -107,8 +93,8 @@ func (b *Bot) SetHandler(fn interface{}) bool {
 	return true
 }
 
-//UpdateHandler : Handles New Updates From Telegram
-func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+// UpdateHandler : Handles New Updates From Telegram
+func (b *Bot) UpdateHandler(_ http.ResponseWriter, r *http.Request) {
 
 	if b.handlerSet {
 
@@ -148,11 +134,11 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		rarg := make([]reflect.Value, 1)
+		arg := make([]reflect.Value, 1)
 
-		rarg[0] = reflect.ValueOf(update)
+		arg[0] = reflect.ValueOf(update)
 
-		go b.handler.Call(rarg)
+		go b.handler.Call(arg)
 	} else {
 		log.Println("Please Set A Function To Be Called Upon New Updates")
 		return
@@ -160,7 +146,7 @@ func (b *Bot) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-//AnswerCallback : Answer Call Back Query From InlineKeyboard
+// AnswerCallback : Answer Call Back Query From InlineKeyboard
 func (b *Bot) AnswerCallback(callbackID, text string, showAlert bool) error {
 	link := b.APIURL + "/answerCallbackQuery"
 
@@ -191,10 +177,10 @@ func (b *Bot) AnswerCallback(callbackID, text string, showAlert bool) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Couldn't Answer CallBack Successfully, Status Code Not OK")
 		return errors.New(string(body))
 	}
@@ -202,7 +188,7 @@ func (b *Bot) AnswerCallback(callbackID, text string, showAlert bool) error {
 	return nil
 }
 
-//SendMessage : Send A Message To A User
+// SendMessage : Send A Message To A User
 func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 
 	link := b.APIURL + "/sendMessage"
@@ -212,8 +198,8 @@ func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 		Text:   s,
 	}
 
-	if len(b.Keyboard.Keyboard) > 0 {
-		reply.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
+	if b.keyboardManager.HasKeyboard(c.ID) {
+		reply.ReplyMarkup.InlineKeyboard = b.keyboardManager.ReturnKeyboard(c.ID)
 	}
 
 	jsonBody, err := json.Marshal(reply)
@@ -231,15 +217,15 @@ func (b *Bot) SendMessage(s string, c Chat) (Message, error) {
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Couldn't Make Request Successfully, Please Check Internet Source")
 		return Message{}, errors.New(string(body))
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
 		return Message{}, errors.New(string(body))
 	}
@@ -271,8 +257,8 @@ func (b *Bot) ReplyMessage(s string, m Message) error {
 		Reply:  m.MessageID,
 	}
 
-	if len(b.Keyboard.Keyboard) > 0 {
-		reply.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
+	if b.keyboardManager.HasKeyboard(m.Chat.ID) {
+		reply.ReplyMarkup.InlineKeyboard = b.keyboardManager.ReturnKeyboard(m.Chat.ID)
 	}
 
 	jsonBody, err := json.Marshal(reply)
@@ -285,15 +271,15 @@ func (b *Bot) ReplyMessage(s string, m Message) error {
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Couldn't Make Request Successfully, Please Check Internet Source")
 		return errors.New(string(body))
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Message Wasn't Sent Successfully, Please Try Again")
 		return errors.New(string(body))
 	}
@@ -304,7 +290,6 @@ func (b *Bot) ReplyMessage(s string, m Message) error {
 func (b *Bot) GetFile(fileId, filename string) error {
 	var res result
 
-	//	link := strings.Join(strings.Split(b.APIURL, "bot")[0] + "/file/"
 	splitLink := strings.Split(b.APIURL, "bot")
 	link := b.APIURL + "/getFile"
 	jsonBody, err := json.Marshal(struct {
@@ -316,11 +301,11 @@ func (b *Bot) GetFile(fileId, filename string) error {
 	resp, err := http.Post(link, "application/json", bytes.NewBuffer(jsonBody))
 
 	if err != nil {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	err = json.NewDecoder(resp.Body).Decode(&res)
 
@@ -336,22 +321,22 @@ func (b *Bot) GetFile(fileId, filename string) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
 
-	file_name, err := os.Create(filename)
+	fileName, err := os.Create(filename)
 
 	if err != nil {
 		return err
 	}
 
-	defer file_name.Close()
+	defer func() { _ = fileName.Close() }()
 
-	_, err = io.Copy(file_name, resp.Body)
+	_, err = io.Copy(fileName, resp.Body)
 
 	if err != nil {
 		return err
@@ -360,7 +345,7 @@ func (b *Bot) GetFile(fileId, filename string) error {
 	return nil
 }
 
-//EditMessage : Edit An Existing Message
+// EditMessage : Edit An Existing Message
 func (b *Bot) EditMessage(m Message, text string) (Message, error) {
 
 	link := b.APIURL + "/editMessageText"
@@ -371,8 +356,8 @@ func (b *Bot) EditMessage(m Message, text string) (Message, error) {
 		Text:      text,
 	}
 
-	if len(b.Keyboard.Keyboard) > 0 {
-		updatedText.ReplyMarkup.InlineKeyboard = b.Keyboard.Keyboard
+	if b.keyboardManager.HasKeyboard(m.Chat.ID) {
+		updatedText.ReplyMarkup.InlineKeyboard = b.keyboardManager.ReturnKeyboard(m.Chat.ID)
 	}
 
 	jsonBody, err := json.Marshal(updatedText)
@@ -387,12 +372,12 @@ func (b *Bot) EditMessage(m Message, text string) (Message, error) {
 	if err != nil {
 		log.Println("Couldn't Communicate With Telegram Servers, Please Check Internet Source")
 		log.Println(err)
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return Message{}, errors.New(string(body))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Message Wasn't Edited Successfully, Please Try Again")
 		return Message{}, errors.New(string(body))
 	}
@@ -408,12 +393,12 @@ func (b *Bot) EditMessage(m Message, text string) (Message, error) {
 		From:      response.Result.From,
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return newMessage, nil
 }
 
-//DeleteMessage : Delete The Specified Message
+// DeleteMessage : Delete The Specified Message
 func (b *Bot) DeleteMessage(message Message) error {
 	link := b.APIURL + "/deleteMessage"
 
@@ -433,14 +418,14 @@ func (b *Bot) DeleteMessage(message Message) error {
 
 	if err != nil {
 		log.Println("Couldn't Complete Message Deletion Request, Please Check Internet Source")
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("Message Wasn't Edited Successfully, Please Try Again")
 		return errors.New(string(body))
 	}
@@ -471,11 +456,11 @@ func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 			return err
 		}
 
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			log.Println("Video Not Sent Successfully, Check Error Logs For More Details")
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return errors.New(string(body))
 		}
 
@@ -489,7 +474,7 @@ func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 		return err
 	}
 
-	defer vid.Close()
+	defer func() { _ = vid.Close() }()
 
 	body := new(bytes.Buffer)
 
@@ -497,15 +482,23 @@ func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 
 	part, err := writer.CreateFormFile("video", filepath.Base(file))
 
-	io.Copy(part, vid)
-
-	writer.WriteField("chat_id", strconv.Itoa(c.ID))
-
-	if caption != "" {
-		writer.WriteField("caption", caption)
+	if err != nil {
+		return err
 	}
 
-	writer.Close()
+	_, err = io.Copy(part, vid)
+
+	if err != nil {
+		return err
+	}
+
+	_ = writer.WriteField("chat_id", strconv.Itoa(c.ID))
+
+	if caption != "" {
+		_ = writer.WriteField("caption", caption)
+	}
+
+	_ = writer.Close()
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", link, body)
@@ -517,11 +510,11 @@ func (b *Bot) SendVideo(file string, caption string, c Chat) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Video Not Sent Successfully, Check Error Logs For Details")
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
 	return nil
@@ -550,11 +543,11 @@ func (b *Bot) SendPhoto(file string, caption string, c Chat) error {
 			return err
 		}
 
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			log.Println("Photo Not Sent Successfully, Check Error Logs For More Details")
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return errors.New(string(body))
 		}
 
@@ -568,7 +561,7 @@ func (b *Bot) SendPhoto(file string, caption string, c Chat) error {
 		return err
 	}
 
-	defer photo.Close()
+	defer func() { _ = photo.Close() }()
 
 	body := new(bytes.Buffer)
 
@@ -576,15 +569,23 @@ func (b *Bot) SendPhoto(file string, caption string, c Chat) error {
 
 	part, err := writer.CreateFormFile("photo", filepath.Base(file))
 
-	io.Copy(part, photo)
-
-	writer.WriteField("chat_id", strconv.Itoa(c.ID))
-
-	if caption != "" {
-		writer.WriteField("caption", caption)
+	if err != nil {
+		return err
 	}
 
-	writer.Close()
+	_, err = io.Copy(part, photo)
+
+	if err != nil {
+		return err
+	}
+
+	_ = writer.WriteField("chat_id", strconv.Itoa(c.ID))
+
+	if caption != "" {
+		_ = writer.WriteField("caption", caption)
+	}
+
+	_ = writer.Close()
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", link, body)
@@ -596,11 +597,11 @@ func (b *Bot) SendPhoto(file string, caption string, c Chat) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Photo Not Sent Successfully, Check Error Logs For Details")
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return errors.New(string(body))
 	}
 	return nil
