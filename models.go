@@ -1,12 +1,10 @@
 package goTelegram
 
-import "reflect"
-
 // Bot : Main Bot Struct
 type Bot struct {
 	Me              user `json:"result"`
 	APIURL          string
-	handler         reflect.Value
+	handler         func(Update)
 	handlerSet      bool
 	keyboardManager *keyboardManager
 }
@@ -39,11 +37,13 @@ type fileDets struct {
 }
 
 type Message struct {
-	MessageID int      `json:"message_id"`
-	Text      string   `json:"Text"`
-	Chat      Chat     `json:"chat"`
-	From      user     `json:"from"`
-	File      document `json:"document"`
+	MessageID int         `json:"message_id"`
+	Text      string      `json:"Text"`
+	Chat      Chat        `json:"chat"`
+	From      user        `json:"from"`
+	File      document    `json:"document"`
+	Photo     []photoSize `json:"photo"`
+	Video     video       `json:"video"`
 }
 
 type document struct {
@@ -51,6 +51,42 @@ type document struct {
 	FileUniqueID string `json:"file_unique_id"`
 	FileName     string `json:"file_name"`
 	FileSize     int    `json:"file_size"`
+}
+
+type photoSize struct {
+	document
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type video struct {
+	photoSize
+	Duration int `json:"duration"`
+}
+
+type InputMedia struct {
+	Type              string `json:"type"`
+	Media             string `json:"media"`
+	Caption           string `json:"caption,omitempty"`
+	HasSpoiler        bool   `json:"has_spoiler,omitempty"`
+	Width             int    `json:"width,omitempty"`
+	Height            int    `json:"height,omitempty"`
+	Duration          int    `json:"duration,omitempty"`
+	SupportsStreaming bool   `json:"supports_streaming,omitempty"`
+}
+
+type mediaGroup struct {
+	ChatID              string          `json:"chat_id"`
+	Media               []InputMedia    `json:"media"`
+	DisableNotification bool            `json:"disable_notification,omitempty"`
+	ProtectContent      bool            `json:"disable_content_type_detection,omitempty"`
+	ReplyParameters     replyParameters `json:"reply_to_message_id,omitempty"`
+}
+
+type MediaOptions struct {
+	UseSpoiler       bool
+	SendNotification bool `json:"disable_notification,omitempty"`
+	ProtectContent   bool `json:"disable_content_type_detection,omitempty"`
 }
 
 type Chat struct {
@@ -64,18 +100,29 @@ type InlineKeyboard struct {
 	Data string `json:"callback_data"`
 }
 
+type replyParameters struct {
+	MessageID                int    `json:"message_id"`
+	ChatID                   int    `json:"chat_id,omitempty"`
+	AllowSendingWithoutReply bool   `json:"allow_sending_without_reply,omitempty"`
+	Quote                    string `json:"quote,omitempty"`
+	QuoteParseMode           string `json:"quote_parse_mode,omitempty"`
+	QuotePosition            int    `json:"quote_position,omitempty"`
+}
+
 type replyBody struct {
-	ChatID      string      `json:"chat_id,omitempty"`
-	Text        string      `json:"text,omitempty"`
-	ParseMode   string      `json:"parse_mode,omitempty"`
-	ReplyMarkup replyMarkup `json:"reply_markup,omitempty"`
-	Reply       int         `json:"reply_to_message_id,omitempty"`
+	ChatID          string          `json:"chat_id,omitempty"`
+	Text            string          `json:"text,omitempty"`
+	ParseMode       string          `json:"parse_mode,omitempty"`
+	ReplyMarkup     replyMarkup     `json:"reply_markup,omitempty"`
+	ReplyParameters replyParameters `json:"reply_to_message_id,omitempty"`
 }
 
 type videoBody struct {
-	ChatID    string      `json:"chat_id"`
-	VideoLink interface{} `json:"video"`
-	Caption   string      `json:"caption,omitempty"`
+	ChatID         string      `json:"chat_id"`
+	Video          interface{} `json:"video"`
+	Caption        string      `json:"caption,omitempty"`
+	HasSpoiler     bool        `json:"has_spoiler,omitempty"`
+	ProtectContent bool        `json:"protect_content,omitempty"`
 }
 
 type replyMarkup struct {
