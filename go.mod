@@ -1,3 +1,3 @@
 module github.com/h4ckitt/goTelegram
 
-go 1.15
+go 1.22
